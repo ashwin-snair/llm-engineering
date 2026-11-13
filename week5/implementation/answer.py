@@ -1,4 +1,5 @@
 from pathlib import Path
+from langchain_groq import ChatGroq
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
@@ -10,11 +11,11 @@ from dotenv import load_dotenv
 
 load_dotenv(override=True)
 
-MODEL = "gpt-6-luna"
+MODEL = "openai/gpt-oss-120b"
 DB_NAME = str(Path(__file__).parent.parent / "vector_db")
 
 # embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-embeddings = OpenAIEmbeddings(model="text-embedding-3-large")
+embeddings = HuggingFaceEmbeddings(model="all-MiniLM-L6-v2")
 RETRIEVAL_K = 10
 
 SYSTEM_PROMPT = """
@@ -28,7 +29,7 @@ Context:
 
 vectorstore = Chroma(persist_directory=DB_NAME, embedding_function=embeddings)
 retriever = vectorstore.as_retriever()
-llm = ChatOpenAI(temperature=0, model_name=MODEL, reasoning_effort="none")
+llm = ChatGroq(temperature=0, model_name=MODEL, reasoning_effort="low")
 
 
 def fetch_context(question: str) -> list[Document]:
