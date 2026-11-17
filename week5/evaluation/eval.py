@@ -1,7 +1,8 @@
+import os
 import sys
 import math
 from pydantic import BaseModel, Field
-from litellm import completion
+from openai import OpenAI
 from dotenv import load_dotenv
 
 from evaluation.test import TestQuestion, load_tests
@@ -10,7 +11,7 @@ from implementation.answer import answer_question, fetch_context
 
 load_dotenv(override=True)
 
-MODEL = "openai/gpt-6-luna"
+MODEL = "openai/gpt-oss-120b"
 db_name = "vector_db"
 
 
@@ -152,8 +153,19 @@ Provide detailed feedback and scores from 1 (very poor) to 5 (ideal) for each di
         },
     ]
 
-    # Call LLM judge with structured outputs (async)
-    judge_response = completion(model=MODEL, extra_body={"reasoning_effort": "none"}, messages=judge_messages, response_format=AnswerEval)
+    groq = OpenAI(
+        base_url="https://api.groq.com/openai/v1",
+        api_key=os.getenv("GROQ_API_KEY"),
+    )
+
+    # Groq's OpenAI-compatible API accepts standard chat.completions args;
+    # request a plain JSON object and validate it into the Pydantic schema.
+    judge_response = groq.chat.completions.create(
+        model=MODEL,
+        messages=judge_messages,
+        temperature=0,
+        response_format={"type": "json_object"},
+    )
 
     answer_eval = AnswerEval.model_validate_json(judge_response.choices[0].message.content)
 
